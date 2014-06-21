@@ -4,18 +4,30 @@
  */
 package interfacesUsuario;
 
+import bancoDeDados.ConexaoBanco;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JOptionPane;
+import model.ControleVagas;
+import usoGeral.Constantes;
+
 /**
  *
  * @author Guilherme
  */
 public class ManutencaoVagas extends javax.swing.JFrame {
 
-    /**
-     * Creates new form ManutencaoVagas
-     */
+    private ConexaoBanco conexaoBanco;
+    private Statement statement;
+    private ResultSet result;
+    
     public ManutencaoVagas() {
         initComponents();
         this.setLocationRelativeTo(null);
+        this.buscarDados();
     }
 
     /**
@@ -37,9 +49,19 @@ public class ManutencaoVagas extends javax.swing.JFrame {
         Vagas_Preferenciais = new javax.swing.JTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE);
-        setTitle("Manutenção de Vagas");
+        setTitle("Vagas");
 
         Confirmar.setText("Confirmar");
+        Confirmar.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                ConfirmarMouseClicked(evt);
+            }
+        });
+        Confirmar.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                ConfirmarKeyPressed(evt);
+            }
+        });
 
         Voltar.setText("Voltar");
         Voltar.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -116,11 +138,115 @@ public class ManutencaoVagas extends javax.swing.JFrame {
         this.retornarTela();
     }//GEN-LAST:event_VoltarMouseClicked
 
+    private void ConfirmarKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_ConfirmarKeyPressed
+        if (evt.getKeyCode() == 10){
+            this.gravarDados();
+        }
+    }//GEN-LAST:event_ConfirmarKeyPressed
+
+    private void ConfirmarMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_ConfirmarMouseClicked
+        this.gravarDados();
+    }//GEN-LAST:event_ConfirmarMouseClicked
+
     private void retornarTela(){
         Administracao administracao = new Administracao();
         administracao.show();
         this.dispose();
     } 
+    
+    private void buscarDados (){
+        this.Vagas_Horizontal.setText(Integer.toString(Constantes.vagasHorizontais)); 
+        this.Vagas_Vertical.setText(Integer.toString(Constantes.vagasVerticais));
+        this.Vagas_Preferenciais.setText(Integer.toString(Constantes.vagasPreferenciais));
+    }
+    
+    private void gravarDados (){
+        
+        String update, insert;
+        int total, horizontal, vertical, preferencial;
+        
+        horizontal = Integer.parseInt(this.Vagas_Horizontal.getText());
+        vertical = Integer.parseInt(this.Vagas_Vertical.getText());
+        preferencial = Integer.parseInt(this.Vagas_Preferenciais.getText());
+        total = horizontal * vertical;
+        
+        if (this.validarDados()){
+            try {
+                conexaoBanco = new ConexaoBanco();
+                statement = conexaoBanco.conexao.createStatement();
+                result = statement.executeQuery("select * from vagas where ID_Vagas = 1");
+
+                if (result.next()){
+                    update = "UPDATE vagas SET ";
+                    update = update + "Total_Vagas = " + total + ", ";
+                    update = update + "Largura_Vagas = " + horizontal + ", ";
+                    update = update + "Altura_Vagas = " + vertical + ", ";
+                    update = update + "Total_Preferencial_Vagas = " + preferencial;
+                    update = update + " WHERE ID_Vagas = 1";
+                    int updateStatement = statement.executeUpdate(update);
+                    if (updateStatement > 0){
+                        JOptionPane.showMessageDialog(null,"Vagas Alteradas com Sucesso!");
+                        Constantes.vagasHorizontais = horizontal;
+                        Constantes.vagasVerticais = vertical;
+                        Constantes.vagasPreferenciais = preferencial;
+                        
+                        this.retornarTela();
+                    }
+                }
+                else{
+                    insert = "INSERT INTO estacionamento.vagas(ID_Vagas, Total_Vagas, Largura_Vagas, Altura_Vagas, Total_Preferencial_Vagas) VALUES (";
+                    insert = insert + 1 + ", ";
+                    insert = insert + total + ", ";
+                    insert = insert + horizontal + ", ";
+                    insert = insert + vertical + ", ";
+                    insert = insert + preferencial + ")";
+                    int updateStatement = statement.executeUpdate(insert);
+                    if (updateStatement > 0){
+                        JOptionPane.showMessageDialog(null,"Vagas Cadastradas com Sucesso!");
+                        Constantes.vagasHorizontais = horizontal;
+                        Constantes.vagasVerticais = vertical;
+                        Constantes.vagasPreferenciais = preferencial;
+                        
+                        this.retornarTela();
+                    }  
+                }
+
+            } catch (ClassNotFoundException | SQLException ex) {
+                Logger.getLogger(ControleVagas.class.getName()).log(Level.SEVERE, null, ex);
+                JOptionPane.showMessageDialog(null,"Erro ao inserir/alterar usuario. \n" + ex.getMessage());
+            }
+            finally{
+                try {
+                    if (!statement.isClosed()){
+                        statement.close();
+                    }
+                } catch (SQLException ex) {
+                    Logger.getLogger(ControleVagas.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        }
+    }
+    
+    private boolean validarDados(){
+        boolean validar = true;
+        
+        try{
+           long teste1 = Long.parseLong(Vagas_Horizontal.getText());
+           long teste2 = Long.parseLong(Vagas_Vertical.getText());
+           long teste3 = Long.parseLong(Vagas_Preferenciais.getText());
+        }
+        catch (NumberFormatException e){
+            JOptionPane.showMessageDialog(null,"Favor digitar uma numeração válida para os campos.");
+            return false;
+        }
+        
+        if ("".equals(Vagas_Horizontal.getText().trim()) || "".equals(Vagas_Vertical.getText().trim()) || "".equals(Vagas_Preferenciais.getText().trim()) ){
+            JOptionPane.showMessageDialog(null,"Favor preencher todos os campos.");
+            validar = false;
+        }
+        
+        return validar;
+    }
     
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton Confirmar;
